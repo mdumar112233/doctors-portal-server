@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const fs = require('fs-extra');
 require('dotenv').config();
 const fileUpload = require('express-fileupload');
 const MongoClient = require('mongodb').MongoClient;
@@ -56,15 +57,46 @@ client.connect(err => {
       const file = req.files.file;
       const name = req.body.name;
       const email = req.body.email;
+      const filePath = `${__dirname}/doctors/${file.name}`;
       console.log(name, email, file);
-      file.mv(`${__dirname}/doctors/${file.name}`, err =>{
+
+      file.mv(filePath, err =>{
           if(err){
               console.log(err);
               return res.status(500)
           }
-          return res.send({name: file.name, path: `${file.name}`})
+          const newImg = fs.readFileSync(filePath);
+          const encImg = newImg.toString('base64');
+
+          const image = {
+              contentType: req.files.file.mimetype,
+              size: req.files.file.size,
+              img: Buffer(encImg, 'base64')
+          };
+
+          doctorsCollection.insertOne({name, email, image})
+          .then(result => {
+              fs.remove(filePath, err => {
+                  if(err){ 
+                      console.log(err);
+                  }
+                 res.send(result.insertedCount > 0)
+
+              })
+          })
+        //   return res.send({name: file.name, path: `${file.name}`})
       })
   })
+
+
+  app.post('/isDoctor', (req, res) =>  {
+    const doctor  = req.body.email;
+    doctorsCollection.find({email: doctor})
+    .toArray((err, doctors) => {
+        res.send(doctors.length > 0)
+    })
+
+});
 
 });
 
