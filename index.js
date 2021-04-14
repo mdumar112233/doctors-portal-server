@@ -25,6 +25,7 @@ app.get('/', (req, res) => {
 client.connect(err => {
     console.log('database connected');
   const appointmentCollection = client.db("doctorsPortal").collection("appointment");
+  const doctorsCollection = client.db("doctorsPortal").collection("doctors");
 
   app.post('/addAppointment', (req, res) =>  {
       const appointment = req.body;
@@ -36,10 +37,19 @@ client.connect(err => {
 
   app.post('/appointmentByDate', (req, res) =>  {
     const date = req.body;
-    appointmentCollection.find({date: date})
-    .toArray((err, documents) => {
-        res.send(documents)
+    const doctor  = req.body.email;
+    doctorsCollection.find({date: date})
+    .toArray((err, doctors) => {
+        const filter = {date: date};
+        if(doctors.length === 0){
+            filter.email  =  email;
+        }
+        appointmentCollection.find(filter)
+        .toArray((err, documents) => {
+            res.send(documents)
+        })
     })
+
 });
 
   app.post('/addDoctor', (req, res) => {
